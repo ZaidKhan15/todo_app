@@ -1,68 +1,120 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() => runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
           brightness: Brightness.light,
-          primaryColor: Colors.deepPurple,
+          primaryColor: Colors.blue,
           accentColor: Colors.orange),
       home: MyApp(),
     ));
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
-
   @override
   _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  List todos = [];
-  String input = "";
+  String todoTitle = "";
 
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    todos.add("This is my work");
-    todos.add("This is my 2work");
-    todos.add("This is my 3work");
-    todos.add("This is my 4work");
-    todos.add("This is my 5work");
+  createTodos() {
+    DocumentReference documentReference =
+        FirebaseFirestore.instance.collection("MyTodos").doc(todoTitle);
+
+    //Map
+    Map<String, String> todos = {"todoTitle": todoTitle};
+
+    documentReference.set(todos).whenComplete(() {
+      print("$todoTitle created");
+    });
+  }
+
+  deleteTodos(item) {
+    DocumentReference documentReference =
+        FirebaseFirestore.instance.collection("MyTodos").doc(item);
+
+    documentReference.delete().whenComplete(() {
+      print("$item deleted");
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Todos"),
+        title: Text("mytodos"),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          showDialog(context: context,
-           builder: (BuildContext context){
-            return AlertDialog(
-               title: Text("Add Todos"),
-               content: TextField(
-                 onChanged: (String value){
-                   input = value;
-                 },
-               ),
-            );
-           });
+          showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  title: Text("Add Todolist"),
+                  content: TextField(
+                    onChanged: (String value) {
+                      todoTitle = value;
+                    },
+                  ),
+                  actions: <Widget>[
+                    FlatButton(
+                        onPressed: () {
+                          createTodos();
+
+                          Navigator.of(context).pop();
+                        },
+                        child: Text("Add"))
+                  ],
+                );
+              });
         },
-        child: Icon(Icons.add),
+        child: Icon(
+          Icons.add,
+          color: Colors.white,
+        ),
       ),
-      body: ListView.builder(
-          itemCount: todos.length,
-          itemBuilder: (BuildContext context, int index) {
-            return Dismissible(
-              key: todos[index],
-              child: Card(
-                child: ListTile(
-                  title: Text(todos[index]),
-                ),
-              ),
-            );
+      body: StreamBuilder(
+          stream: Firestore.instance.collection("MyTodos").snapshots(),
+          builder: (context, snapshots) {
+            if (snapshots.hasData) {
+              return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: snapshots.data.documents.length,
+                  itemBuilder: (context, index) {
+                    DocumentSnapshot documentSnapshot =
+                        snapshots.data.documents[index];
+                    return Dismissible(
+                        onDismissed: (direction) {
+                          deleteTodos(documentSnapshot["todoTitle"]);
+                        },
+                        key: Key(documentSnapshot["todoTitle"]),
+                        child: Card(
+                          elevation: 4,
+                          margin: EdgeInsets.all(8),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          child: ListTile(
+                            title: Text(documentSnapshot["todoTitle"]),
+                            trailing: IconButton(
+                                icon: Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () {
+                                  deleteTodos(documentSnapshot["todoTitle"]);
+                                }),
+                          ),
+                        ));
+                  });
+            } else {
+              return Align(
+                alignment: FractionalOffset.bottomCenter,
+                child: CircularProgressIndicator(),
+              );
+            }
           }),
     );
   }
