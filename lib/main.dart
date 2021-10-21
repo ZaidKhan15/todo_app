@@ -1,3 +1,5 @@
+import 'dart:html';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -77,34 +79,33 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       body: StreamBuilder(
-          stream: Firestore.instance.collection("MyTodos").snapshots(),
-          builder: (context, snapshots) {
-            if (snapshots.hasData) {
+          stream: FirebaseFirestore.instance.collection("MyTodos").snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
               return ListView.builder(
                   shrinkWrap: true,
-                  itemCount: snapshots.data.documents.length,
-                  itemBuilder: (context, index) {
-                    DocumentSnapshot documentSnapshot =
-                        snapshots.data.documents[index];
+                  itemCount: snapshot.data.documents.length,
+                  itemBuilder: (context,index) {
+                     DocumentSnapshot user = snapshot.data.documents[index];
                     return Dismissible(
                         onDismissed: (direction) {
-                          deleteTodos(documentSnapshot["todoTitle"]);
+                          deleteTodos(user["todoTitle"]);
                         },
-                        key: Key(documentSnapshot["todoTitle"]),
+                        key: Key(user["todoTitle"]),
                         child: Card(
                           elevation: 4,
                           margin: EdgeInsets.all(8),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8)),
                           child: ListTile(
-                            title: Text(documentSnapshot["todoTitle"]),
+                            title: Text(user["todoTitle"]),
                             trailing: IconButton(
                                 icon: Icon(
                                   Icons.delete,
                                   color: Colors.red,
                                 ),
                                 onPressed: () {
-                                  deleteTodos(documentSnapshot["todoTitle"]);
+                                  deleteTodos(user["todoTitle"]);
                                 }),
                           ),
                         ));
